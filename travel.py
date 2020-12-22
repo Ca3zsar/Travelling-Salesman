@@ -29,11 +29,38 @@ def max_value(matrix):
     return maximum
 
 
+def fitness(individual,maximum):
+    fitness = (maximum/get_minimum(individual))**2
+    return fitness
+
+
 def get_new_individual(dimensions):
     individual = [i for i in range(dimensions)]
     random.shuffle(individual)
     
     return individual
+
+
+def get_population(size,dimensions):
+    population = [get_new_individual(dimensions) for _ in range(size)]
+    return population
+
+
+def evaluatePop(population,maximum):
+    eval = [fitness(individual,maximum) for individual in population]
+    return eval
+
+
+def criteriaSort(listToBeSorted,criteria):
+    population = listToBeSorted[:]
+    zipped_list = zip(criteria,population)
+    zipped_list = sorted(zipped_list)
+    
+    criteria, population = zip(*zipped_list)
+    population = list(population)
+    criteria = list(criteria)
+    
+    return population[::-1]
 
 
 def inverse_individual(individual):
@@ -70,6 +97,142 @@ def swap_individual(individual):
     
     return v_copy
 
+
+def tournamentSelect(population,fitnessValues,POP_SIZE,max_value):
+    sampleSize = 15
+    selectedSize = 5
+    newPopulation = []
+    
+    for i in range((POP_SIZE)//selectedSize):
+        sample = random.sample(population,sampleSize)
+        sampleFitness = evaluatePop(sample,max_value)
+        sample = criteriaSort(sample,sampleFitness)
+        
+        for element in sample[:selectedSize]:
+            newPopulation.append(element)
+        # newPopulation.append(random.choice(sample[selectedSize:]))
+    
+    return newPopulation
+
+
+def mutate(population):
+    mutationP = 0.03
+    mutation_nr = 10
+    newPopulation = []
+    # Mutate every bit in every individual.
+    for i in range(len(population)):
+        newChild = population[i][:]
+        for j in range(mutation_nr):
+            r = 1-random.random()
+            first = random.randrange(0,len(newChild))
+            second = random.randrange(0,len(newChild))
+            if r < mutationP:
+                newChild[first],newChild[second] = newChild[second],newChild[first]
+        
+        newPopulation.append(newChild)
+        newPopulation.append(population[i])
+    
+    return newPopulation
+
+
+def crossover(population):
+    crossoverP = 0.2
+    
+    newP = [0]*len(population)
+    newPopulation = population[:]
+    for i in range(len(population)):
+        newP[i] = random.random()
+    
+    zipped_list = zip(newP,newPopulation)
+    zipped_list = sorted(zipped_list)
+    
+    newP, newPopulation = zip(*zipped_list)
+    newPopulation = list(newPopulation)
+    newP = list(newP)
+    
+    right = bisect.bisect_left(newP,crossoverP)
+    if right % 2 == 0:
+        chance = random.getrandbits(1)
+        if chance == 1:
+            right += 1
+        else:
+            right -= 1
+    
+    parents = [newPopulation[i] for i in range(right+1)]
+    random.shuffle(parents)
+    
+    index = 0
+    while index < len(parents):
+        leftLocus = random.randrange(1,len(parents)-1)
+        rightLocus = random.randrange(2,len(parents))
+        while rightLocus <= leftLocus:
+            rightLocus = random.randrange(1,len(parents)-1)
+        
+        child1 = child2 = [None * len(parents[0])]
+        for i in range(leftLocus,rightLocus+1):
+            child1[i] = parents[index+1][i]
+            child2[i] = parents[index][i]
+        
+        order1 = parents[index][rightLocus+1:] + parents[index][:rightLocus+1]
+        order2 = parents[index+1][rightLocus+1:] + parents[index+1][:rightLocus+1]
+
+        for i in range(leftLocus,rightLocus+1):
+            order1.remove(child2[i])
+            order2.remove(child1[i])
+
+        for i in range(rightLocus+1,len(parents[0])):
+            child1[i] = order2[i-rightLocus-1]
+            child2[i] = order1[i-rightLocus-1]
+        
+        for i in range(leftLocus):
+            child1[i] = order2[i+len(parents[0])-rightLocus]
+            child2[i] = order1[i+len(parents[0])-rightLocus] 
+        
+        population.append(child1)
+        population.append(child2)
+
+    return population    
+
+
+def genetic(matrix):
+    genT = 0
+    POP_SIZE = 100
+    maximum_value = max_value(matrix)
+    
+    population = get_population(POP_SIZE,len(matrix))
+    fitnessValues = evaluatePop(population,maximum_value)
+    population = criteriaSort(population,fitnessValues)
+    
+    while genT < 1000:
+        genT += 1
+        
+        #Elitism : Save the best 5 individuals
+        saved = population[:5]
+        
+        #Selection
+        population = tournamentSelect(population[len(saved):],fitnessValues[len(saved):],
+                                      POP_SIZE-len(saved),maximum_value)
+        
+        #Mutation
+        population = mutate(population)
+        
+        #Crossover
+        population[:0] = saved
+        population = crossover(population)
+        
+        #Evaluate
+        fitnessValues = evaluatePop(population,maximum_value)
+        
+        #Sort population by fitness. (Optional)
+        population = criteriaSort(population,fitnessValues)
+
+    minim = maximum_value
+    for individual in population:
+        value = get_minimum(individual,matrix)  
+        if value < minim:
+            minim = value  
+            
+    return minim
 
 def simulated_annealing(matrix):
     T = 105
@@ -141,7 +304,7 @@ def parse_file(filename):
 
 def main():
     # Iterate over all test files.
-     with open(f"results\\SA.csv",newline='',mode='w') as csvFile:
+     with open(f"results\\GA-ST[15,5]-E-S-m3.csv",newline='',mode='w') as csvFile:
         fieldNames = ['File','Best','Worst','Mean','SD','Time']
         writer = csv.DictWriter(csvFile,fieldnames=fieldNames)
         writer.writeheader()
