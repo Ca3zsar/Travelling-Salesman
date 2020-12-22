@@ -16,7 +16,7 @@ def get_minimum(individual,matrix):
     
     result += matrix[individual[-1]][individual[0]]
     
-    return cost
+    return result
 
 
 def max_value(matrix):
@@ -30,10 +30,45 @@ def max_value(matrix):
 
 
 def get_new_individual(dimensions):
-    individual = [range(dimensions)]
+    individual = [i for i in range(dimensions)]
     random.shuffle(individual)
     
     return individual
+
+
+def inverse_individual(individual):
+    n = len(individual)
+    left = random.randrange(0,n-1)
+    right = random.randrange(left+1,n)
+    
+    v_copy = individual[:left]
+    v_copy.extend(individual[left:right][::-1])
+    v_copy.extend(individual[right:])
+    
+    return v_copy 
+
+
+def insert_individual(individual):
+    n = len(individual)
+    left = random.randrange(0,n-1)
+    right = random.randrange(left+1,n)
+    
+    v_copy = individual[:]
+    item = v_copy.pop(right)
+    v_copy.insert(left,item)
+    
+    return v_copy
+
+
+def swap_individual(individual):
+    n = len(individual)
+    left = random.randrange(0,n-1)
+    right = random.randrange(left+1,n)
+    
+    v_copy = individual[:]
+    v_copy[left],v_copy[right] = v_copy[right],v_copy[left]
+    
+    return v_copy
 
 
 def simulated_annealing(matrix):
@@ -43,6 +78,44 @@ def simulated_annealing(matrix):
     v_current = get_new_individual(len(matrix))
     current_best = get_minimum(v_current,matrix)
     
+    while T> 10**(-8):
+        local = False
+        
+        improve = False
+        tries = 100
+        
+        while not improve:
+            # Use 3 ways to determine a better neighbour : Inverse, Insert and Swap
+            v_inverse = inverse_individual(v_current)
+            v_insert = insert_individual(v_current)        
+            v_swap = swap_individual(v_current)
+            
+            inverse_value = get_minimum(v_inverse,matrix)
+            insert_value = get_minimum(v_insert,matrix)
+            swap_value = get_minimum(v_swap,matrix)
+            
+            new_inds = [v_inverse,v_insert,v_swap]
+            new_values = [inverse_value,insert_value,swap_value]        
+            
+            bestOf = min(new_values)
+            
+            if bestOf < current_best:
+                v_current = new_inds[new_values.index(bestOf)][:]
+                current_best = bestOf
+            else:
+                P = math.exp((-abs(bestOf-current_best))/T)
+                if random.random() < P:
+                    v_current = new_inds[new_values.index(bestOf)][:]
+                    current_best = bestOf
+                else:
+                    tries -= 1
+            
+            if tries == 0:
+                improve = True
+    
+        T *= rate
+    
+    return current_best
 
 
 def parse_file(filename):
@@ -66,15 +139,14 @@ def parse_file(filename):
 
 def main():
     # Iterate over all test files.
-    for filename in os.listdir(test_directory):
-        graph = parse_file(filename)
-        
-        print(f"The processed file is : {filename}")
-        with open(f"results\\{filename}-SA.csv",newline='',mode='w') as csvFile:
-            fieldNames = ['Approach','Best','Worst','Mean','SD','Time']
-            writer = csv.DictWriter(csvFile,fieldnames=fieldNames)
-            writer.writeheader()
+     with open(f"results\\SA.csv",newline='',mode='w') as csvFile:
+        fieldNames = ['Approach','Best','Worst','Mean','SD','Time']
+        writer = csv.DictWriter(csvFile,fieldnames=fieldNames)
+        writer.writeheader()
+        for filename in os.listdir(test_directory):
+            graph = parse_file(filename)
             
+            print(f"The processed file is : {filename}")
             best = worst = None
             avg = 0
             time = 0
@@ -82,7 +154,7 @@ def main():
             
             for test in range(30):
                 startTime = perf_counter()
-                result = simulated_annealing(matrix)
+                result = simulated_annealing(graph)
                 endTime = perf_counter()
                 
                 print(f"{test}. {round(endTime-startTime,5)} seconds : {round(result,5)}")
