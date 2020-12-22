@@ -11,10 +11,10 @@ test_directory = 'ALL_atsp'
 def get_minimum(individual,matrix):
     result = 0
     for i in range(len(matrix)-1):
-        cost = matrix[individual[i]][individual[i+1]]
+        cost = matrix[individual[i]-1][individual[i+1]-1]
         result += cost        
     
-    result += matrix[individual[-1]][individual[0]]
+    result += matrix[individual[-1]-1][individual[0]-1]
     
     return result
 
@@ -72,17 +72,18 @@ def swap_individual(individual):
 
 
 def simulated_annealing(matrix):
-    T = 110
-    rate = 0.955
+    T = 105
+    rate = 0.985
+    iterations = 10000
     
     v_current = get_new_individual(len(matrix))
     current_best = get_minimum(v_current,matrix)
     
-    while T> 10**(-8):
+    while T> 10**(-8) and iterations>0:
         local = False
         
         improve = False
-        tries = 100
+        tries = 110
         
         while not improve:
             # Use 3 ways to determine a better neighbour : Inverse, Insert and Swap
@@ -114,7 +115,8 @@ def simulated_annealing(matrix):
                 improve = True
     
         T *= rate
-    
+        iterations -= 1
+        
     return current_best
 
 
@@ -140,7 +142,7 @@ def parse_file(filename):
 def main():
     # Iterate over all test files.
      with open(f"results\\SA.csv",newline='',mode='w') as csvFile:
-        fieldNames = ['Approach','Best','Worst','Mean','SD','Time']
+        fieldNames = ['File','Best','Worst','Mean','SD','Time']
         writer = csv.DictWriter(csvFile,fieldnames=fieldNames)
         writer.writeheader()
         for filename in os.listdir(test_directory):
@@ -180,7 +182,7 @@ def main():
             time/=30
             print(f"Mean Time: {time}")
             
-            writer.writerow({'Approach':'SA',
+            writer.writerow({'File':filename,
                                 'Best':round(best,5),'Worst':round(worst,5),
                                 'Mean':round(avg,5),'SD':round(math.sqrt(stdev),5),'Time':round(time,5)})
             
