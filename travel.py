@@ -29,10 +29,6 @@ def max_value(matrix):
     return maximum * n
 
 
-<<<<<<< Updated upstream
-def fitness(individual,maximum,matrix):
-    fitness = (maximum/get_minimum(individual,matrix))**2
-=======
 def check(population):
     n = len(population[0])
     for ind in population:
@@ -42,7 +38,6 @@ def check(population):
             
 def fitness(individual,matrix):
     fitness = (1/get_minimum(individual,matrix))**2
->>>>>>> Stashed changes
     return fitness
 
 
@@ -58,10 +53,6 @@ def get_population(size,dimensions):
     return population
 
 
-<<<<<<< Updated upstream
-def evaluatePop(population,maximum,matrix):
-    eval = [fitness(individual,maximum,matrix) for individual in population]
-=======
 def population_control(population,matrix,dimensions):
     values_count = {}
     
@@ -97,7 +88,6 @@ def reset_population(population,POP_SIZE,dimensions):
 
 def evaluatePop(population,matrix):
     eval = [fitness(individual,matrix) for individual in population]
->>>>>>> Stashed changes
     return eval
 
 
@@ -157,27 +147,17 @@ def swap_individual(individual):
     return v_copy
 
 
-<<<<<<< Updated upstream
-def tournamentSelect(population,fitnessValues,POP_SIZE,max_value,matrix):
-    sampleSize = 15
-    selectedSize = 5
-=======
 def tournamentSelect(population,fitnessValues,POP_SIZE,matrix):
     sampleSize = 30
     selectedSize = 10
     done = 0
->>>>>>> Stashed changes
     newPopulation = []
     
     matingP = 0.35
     
     for i in range((POP_SIZE)//selectedSize):
         sample = random.sample(population,sampleSize)
-<<<<<<< Updated upstream
-        sampleFitness = evaluatePop(sample,max_value,matrix)
-=======
         sampleFitness = evaluatePop(sample,matrix)
->>>>>>> Stashed changes
         sample = criteriaSort(sample,sampleFitness)
         
         for element in sample[:selectedSize]:
@@ -196,29 +176,7 @@ def tournamentSelect(population,fitnessValues,POP_SIZE,matrix):
     
     return newPopulation
 
-<<<<<<< Updated upstream
-
-def populationSelect(population,fitnessValues,POP_SIZE,max_value):
-    totalFitness = sum(fitnessValues,max_value)
-    individualP = [value/totalFitness for value in fitnessValues]   
-    
-    accumulatedP = [0]*(len(population)+1)
-    for i in range(len(population)):
-        accumulatedP[i+1] = accumulatedP[i] + individualP[i]
-
-    newPopulation = []
-    for i in range(POP_SIZE):
-        r = 1 - random.random()
-        index = bisect.bisect_right(accumulatedP,r) - 1
-        newPopulation.append(population[index])
-    
-    return newPopulation
-
-
-def constant_mutation(population,mutationP):
-=======
 def constant_mutation(population,mutationP,matrix):
->>>>>>> Stashed changes
     mutation_nr = len(population)//2
     newPopulation = []
     
@@ -251,31 +209,8 @@ def constant_mutation(population,mutationP,matrix):
     return newPopulation
 
 
-<<<<<<< Updated upstream
-def deterministic_mutation(population,mutationP):
-    newPopulation = []
-    
-    for i in range(len(population)):
-        newChild = population[i][:]
-        for j in range(len(population[i])):
-            r = 1-random.random()
-            first = random.randrange(0,len(newChild))
-            second = random.randrange(0,len(newChild))
-            if r < mutationP:
-                newChild[first],newChild[second] = newChild[second],newChild[first]
-        
-        newPopulation.append(newChild)
-        newPopulation.append(population[i])
-    
-    return newPopulation
-
-
-def crossover(population,fitnessValues,POP_SIZE,max_value):
-    crossoverP = 0.20
-=======
 def crossover(population,fitnessValues,POP_SIZE,max_value):
     crossoverP = 0.25
->>>>>>> Stashed changes
     
     newP = [0]*len(population)
     newPopulation = population[:]
@@ -297,18 +232,6 @@ def crossover(population,fitnessValues,POP_SIZE,max_value):
             right -= 1
     
     parents = [newPopulation[i] for i in range(right+1)]
-    # totalFitness = sum(fitnessValues,max_value)
-    # individualP = [value/totalFitness for value in fitnessValues]   
-    
-    # accumulatedP = [0]*(len(population)+1)
-    # for i in range(len(population)):
-    #     accumulatedP[i+1] = accumulatedP[i] + individualP[i]
-    # parents = []
-    # for i in range(POP_SIZE//2):
-    #     r = 1 - random.random()
-    #     index = bisect.bisect_right(accumulatedP,r) - 2
-    #     parents.append(population[index])
-        
     random.shuffle(parents)
     
     index = 0
@@ -331,17 +254,12 @@ def crossover(population,fitnessValues,POP_SIZE,max_value):
             order2.remove(child1[i])
 
         for i in range(leftLocus):
-<<<<<<< Updated upstream
-            child1[i] = order2[i+len(parents[0])-rightLocus-1]
-            child2[i] = order1[i+len(parents[0])-rightLocus-1] 
-=======
             child1[i] = order2[i]
             child2[i] = order1[i]
         
         for i in range(rightLocus+1,len(parents[0])):
             child1[i] = order2[i-rightLocus-1+leftLocus]
             child2[i] = order1[i-rightLocus-1+leftLocus] 
->>>>>>> Stashed changes
         
         population.append(child1)
         population.append(child2)
@@ -357,14 +275,6 @@ def genetic(matrix):
     maximum_value = max_value(matrix)
     
     population = get_population(POP_SIZE,len(matrix))
-<<<<<<< Updated upstream
-    fitnessValues = evaluatePop(population,maximum_value,matrix)
-    population = criteriaSort(population,fitnessValues)
-    
-    mutationP = 0.03
-    
-    while genT < 1000:
-=======
     fitnessValues = evaluatePop(population,matrix)
     # population = criteriaSort(population,fitnessValues)
     mutationP = 0.03
@@ -375,7 +285,6 @@ def genetic(matrix):
     minim_curent = minim = None
     
     while genT < 2000:
->>>>>>> Stashed changes
         genT += 1
         # deterministM = max((10 + ((len(matrix)*5)/(1000-1))*genT)**(-1),mutationP)
         
@@ -387,29 +296,6 @@ def genetic(matrix):
         # population = population_control(population,matrix,len(matrix))
         
         #Selection
-<<<<<<< Updated upstream
-        population = tournamentSelect(population[len(saved):],fitnessValues[len(saved):],
-                                      POP_SIZE-len(saved),maximum_value,matrix)
-        
-        # population = populationSelect(population,fitnessValues,POP_SIZE,maximum_value)
-        
-        #Mutation
-        population = constant_mutation(population,mutationP)
-        # population = deterministic_mutation(population,deterministM)
-        
-        #Crossover
-        population[:0] = saved
-        fitnessValues = evaluatePop(population,maximum_value,matrix)
-        population = crossover(population,fitnessValues,POP_SIZE,maximum_value)
-        
-        #Evaluate
-        fitnessValues = evaluatePop(population,maximum_value,matrix)
-        
-        #Sort population by fitness. (Optional)
-        population = criteriaSort(population,fitnessValues)
-        
-
-=======
         population = tournamentSelect(population,fitnessValues,
                                       POP_SIZE,matrix)
         
@@ -458,7 +344,6 @@ def genetic(matrix):
             # print(mutationP)
         # print(f"{genT}. {minim}")
         
->>>>>>> Stashed changes
     minim = maximum_value
     
     for individual in population:
