@@ -11,10 +11,10 @@ test_directory = 'ALL_atsp'
 def get_minimum(individual,matrix):
     result = 0
     for i in range(len(matrix)-1):
-        cost = matrix[individual[i]-1][individual[i+1]-1]
+        cost = matrix[individual[i]][individual[i+1]]
         result += cost        
     
-    result += matrix[individual[-1]-1][individual[0]-1]
+    result += matrix[individual[-1]][individual[0]]
     
     return result
 
@@ -29,8 +29,15 @@ def max_value(matrix):
     return maximum * n
 
 
-def fitness(individual,maximum,matrix):
-    fitness = (maximum/get_minimum(individual,matrix))**2
+def check(population):
+    n = len(population[0])
+    for ind in population:
+        if (n*(n-1)/2) != sum(ind):
+            return 0
+    return 1
+            
+def fitness(individual,matrix):
+    fitness = (1/get_minimum(individual,matrix))**2
     return fitness
 
 
@@ -46,8 +53,41 @@ def get_population(size,dimensions):
     return population
 
 
-def evaluatePop(population,maximum,matrix):
-    eval = [fitness(individual,maximum,matrix) for individual in population]
+def population_control(population,matrix,dimensions):
+    values_count = {}
+    
+    n = len(population)
+    
+    yes = 1
+    
+    while yes:
+        yes = 0
+        for ind in population:
+            value = population.count(ind)
+            if value > n*0.1:
+                to_keep = ind[:]
+                
+                population = [el for el in population if el != to_keep]
+                population.append(to_keep)
+                
+                yes = 1
+                break
+            
+    population.extend(get_population(n-len(population),dimensions))
+    
+    return population 
+
+def reset_population(population,POP_SIZE,dimensions):
+    to_save = 5
+    
+    new_population = population[to_save:2*to_save]
+    new_population.extend(get_population(POP_SIZE-to_save,dimensions))
+    
+    return new_population
+    
+
+def evaluatePop(population,matrix):
+    eval = [fitness(individual,matrix) for individual in population]
     return eval
 
 
@@ -61,6 +101,15 @@ def criteriaSort(listToBeSorted,criteria):
     criteria = list(criteria)
     
     return population[::-1]
+
+
+def get_best(number,population,matrix):
+    fitnessValues = evaluatePop(population,matrix)
+    
+    newPop = population[:]
+    newPop = criteriaSort(newPop,fitnessValues)
+    
+    return newPop[:number]
 
 
 def inverse_individual(individual):
@@ -98,79 +147,70 @@ def swap_individual(individual):
     return v_copy
 
 
-def tournamentSelect(population,fitnessValues,POP_SIZE,max_value,matrix):
-    sampleSize = 15
-    selectedSize = 5
+def tournamentSelect(population,fitnessValues,POP_SIZE,matrix):
+    sampleSize = 30
+    selectedSize = 10
+    done = 0
     newPopulation = []
+    
+    matingP = 0.35
     
     for i in range((POP_SIZE)//selectedSize):
         sample = random.sample(population,sampleSize)
-        sampleFitness = evaluatePop(sample,max_value,matrix)
+        sampleFitness = evaluatePop(sample,matrix)
         sample = criteriaSort(sample,sampleFitness)
         
         for element in sample[:selectedSize]:
             newPopulation.append(element)
+        
+        r = random.random()
+        if r < matingP:
+            for ind in sample:
+                population.remove(ind)
+            
+            if len(population) < sampleSize:
+                population.extend(get_population(sampleSize-len(population),len(matrix)))
+            
+        
         # newPopulation.append(random.choice(sample[selectedSize:]))
     
     return newPopulation
 
-
-def populationSelect(population,fitnessValues,POP_SIZE,max_value):
-    totalFitness = sum(fitnessValues,max_value)
-    individualP = [value/totalFitness for value in fitnessValues]   
-    
-    accumulatedP = [0]*(len(population)+1)
-    for i in range(len(population)):
-        accumulatedP[i+1] = accumulatedP[i] + individualP[i]
-
-    newPopulation = []
-    for i in range(POP_SIZE):
-        r = 1 - random.random()
-        index = bisect.bisect_right(accumulatedP,r) - 1
-        newPopulation.append(population[index])
-    
-    return newPopulation
-
-
-def constant_mutation(population,mutationP):
+def constant_mutation(population,mutationP,matrix):
     mutation_nr = len(population)//2
     newPopulation = []
     
     for i in range(len(population)):
         newChild = population[i][:]
-        for j in range(mutation_nr):
-            r = 1-random.random()
-            first = random.randrange(0,len(newChild))
-            second = random.randrange(0,len(newChild))
-            if r < mutationP:
-                newChild[first],newChild[second] = newChild[second],newChild[first]
         
-        newPopulation.append(newChild)
-        newPopulation.append(population[i])
-    
-    return newPopulation
-
-
-def deterministic_mutation(population,mutationP):
-    newPopulation = []
-    
-    for i in range(len(population)):
-        newChild = population[i][:]
-        for j in range(len(population[i])):
-            r = 1-random.random()
-            first = random.randrange(0,len(newChild))
-            second = random.randrange(0,len(newChild))
-            if r < mutationP:
-                newChild[first],newChild[second] = newChild[second],newChild[first]
+        r = 1-random.random()
         
-        newPopulation.append(newChild)
+        if r < mutationP:
+            v_inverse = inverse_individual(newChild)
+            v_insert = insert_individual(newChild)       
+            v_swap = swap_individual(newChild)
+            
+            inverse_value = get_minimum(v_inverse,matrix)
+            insert_value = get_minimum(v_insert,matrix)
+            swap_value = get_minimum(v_swap,matrix)
+            
+            new_inds = [v_inverse,v_insert,v_swap]
+            new_values = [inverse_value,insert_value,swap_value]        
+            
+            bestOf = min(new_values)
+            
+            newChild = new_inds[new_values.index(bestOf)][:]
+            current_best = bestOf
+            
+            newPopulation.append(newChild)
+            
         newPopulation.append(population[i])
     
     return newPopulation
 
 
 def crossover(population,fitnessValues,POP_SIZE,max_value):
-    crossoverP = 0.20
+    crossoverP = 0.25
     
     newP = [0]*len(population)
     newPopulation = population[:]
@@ -182,7 +222,6 @@ def crossover(population,fitnessValues,POP_SIZE,max_value):
     
     newP, newPopulation = zip(*zipped_list)
     newPopulation = list(newPopulation)
-    newP = list(newP)
     
     right = bisect.bisect_left(newP,crossoverP)
     if right % 2 == 0:
@@ -193,18 +232,6 @@ def crossover(population,fitnessValues,POP_SIZE,max_value):
             right -= 1
     
     parents = [newPopulation[i] for i in range(right+1)]
-    # totalFitness = sum(fitnessValues,max_value)
-    # individualP = [value/totalFitness for value in fitnessValues]   
-    
-    # accumulatedP = [0]*(len(population)+1)
-    # for i in range(len(population)):
-    #     accumulatedP[i+1] = accumulatedP[i] + individualP[i]
-    # parents = []
-    # for i in range(POP_SIZE//2):
-    #     r = 1 - random.random()
-    #     index = bisect.bisect_right(accumulatedP,r) - 2
-    #     parents.append(population[index])
-        
     random.shuffle(parents)
     
     index = 0
@@ -226,13 +253,13 @@ def crossover(population,fitnessValues,POP_SIZE,max_value):
             order1.remove(child2[i])
             order2.remove(child1[i])
 
-        for i in range(rightLocus+1,len(parents[0])):
-            child1[i] = order2[i-rightLocus-1]
-            child2[i] = order1[i-rightLocus-1]
-        
         for i in range(leftLocus):
-            child1[i] = order2[i+len(parents[0])-rightLocus-1]
-            child2[i] = order1[i+len(parents[0])-rightLocus-1] 
+            child1[i] = order2[i]
+            child2[i] = order1[i]
+        
+        for i in range(rightLocus+1,len(parents[0])):
+            child1[i] = order2[i-rightLocus-1+leftLocus]
+            child2[i] = order1[i-rightLocus-1+leftLocus] 
         
         population.append(child1)
         population.append(child2)
@@ -244,44 +271,79 @@ def crossover(population,fitnessValues,POP_SIZE,max_value):
 
 def genetic(matrix):
     genT = 0
-    POP_SIZE = 100
+    POP_SIZE = 500
     maximum_value = max_value(matrix)
     
     population = get_population(POP_SIZE,len(matrix))
-    fitnessValues = evaluatePop(population,maximum_value,matrix)
-    population = criteriaSort(population,fitnessValues)
-    
+    fitnessValues = evaluatePop(population,matrix)
+    # population = criteriaSort(population,fitnessValues)
     mutationP = 0.03
+    same = 0
     
-    while genT < 1000:
+    to_save = 20
+    
+    minim_curent = minim = None
+    
+    while genT < 2000:
         genT += 1
         # deterministM = max((10 + ((len(matrix)*5)/(1000-1))*genT)**(-1),mutationP)
         
+        population = population_control(population,matrix,len(matrix))
+        
         #Elitism : Save the best 5 individuals
-        saved = population[:5]
+        saved = get_best(to_save,population,matrix)
+        
+        # population = population_control(population,matrix,len(matrix))
         
         #Selection
-        population = tournamentSelect(population[len(saved):],fitnessValues[len(saved):],
-                                      POP_SIZE-len(saved),maximum_value,matrix)
-        
-        # population = populationSelect(population,fitnessValues,POP_SIZE,maximum_value)
+        population = tournamentSelect(population,fitnessValues,
+                                      POP_SIZE,matrix)
         
         #Mutation
-        population = constant_mutation(population,mutationP)
-        # population = deterministic_mutation(population,deterministM)
+        # population[:0] = saved
+        population = constant_mutation(population,mutationP,matrix)
         
         #Crossover
         population[:0] = saved
-        fitnessValues = evaluatePop(population,maximum_value,matrix)
+        fitnessValues = evaluatePop(population,matrix)
         population = crossover(population,fitnessValues,POP_SIZE,maximum_value)
         
         #Evaluate
-        fitnessValues = evaluatePop(population,maximum_value,matrix)
+        # population[:0] = saved
+        fitnessValues = evaluatePop(population,matrix)
         
         #Sort population by fitness. (Optional)
-        population = criteriaSort(population,fitnessValues)
+        # population = criteriaSort(population,fitnessValues)
         
-
+        minim = maximum_value
+        for i in population:
+            value = get_minimum(i,matrix)
+            if value < minim:
+                minim = value
+            
+        if minim_curent:
+            if minim_curent == minim:
+                same += 1
+            else:
+                minim_curent = minim
+                same = 1
+                to_save = min(to_save+1,20)
+                mutationP *= 0.98
+        else :
+            same = 1
+            minim_curent = minim
+        
+        if same % 5 == 0:
+            # population = reset_population(population,POP_SIZE,len(matrix))
+            # fitnessValues = evaluatePop(population,matrix)
+            
+            if to_save > 0:
+                to_save -= 1
+            
+            mutationP = min(mutationP * 1.015,0.09*(genT//400+1))
+            # print(mutationP)
+        # print(f"{genT}. {minim}")
+        
     minim = maximum_value
     
     for individual in population:
@@ -361,7 +423,7 @@ def parse_file(filename):
 
 def main():
     # Iterate over all test files.
-     with open(f"results\\GA-ST[15,5]-E-S-m3.csv",newline='',mode='w') as csvFile:
+     with open(f"results\\GA-ST[30,10]-E-S-cx25-POP500.csv",newline='',mode='w') as csvFile:
         fieldNames = ['File','Best','Worst','Mean','SD','Time']
         writer = csv.DictWriter(csvFile,fieldnames=fieldNames)
         writer.writeheader()
