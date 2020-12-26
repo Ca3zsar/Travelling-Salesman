@@ -12,7 +12,7 @@ def get_minimum(individual,matrix):
     result = 0
     for i in range(len(matrix)-1):
         cost = matrix[individual[i]][individual[i+1]]
-        result += cost        
+        result += cost       
     
     result += matrix[individual[-1]][individual[0]]
     
@@ -64,7 +64,7 @@ def population_control(population,matrix,dimensions):
         yes = 0
         for ind in population:
             value = population.count(ind)
-            if value > n*0.1:
+            if value > n*0.2:
                 to_keep = ind[:]
                 
                 population = [el for el in population if el != to_keep]
@@ -148,12 +148,12 @@ def swap_individual(individual):
 
 
 def tournamentSelect(population,fitnessValues,POP_SIZE,matrix):
-    sampleSize = 30
-    selectedSize = 10
+    sampleSize = 20
+    selectedSize = 5
     done = 0
     newPopulation = []
     
-    matingP = 0.35
+    matingP = 0.25
     
     for i in range((POP_SIZE)//selectedSize):
         sample = random.sample(population,sampleSize)
@@ -164,14 +164,10 @@ def tournamentSelect(population,fitnessValues,POP_SIZE,matrix):
             newPopulation.append(element)
         
         r = random.random()
-        if r < matingP:
+        if r < matingP and len(population) > 2*sampleSize:
             for ind in sample:
                 population.remove(ind)
             
-            if len(population) < sampleSize:
-                population.extend(get_population(sampleSize-len(population),len(matrix)))
-            
-        
         # newPopulation.append(random.choice(sample[selectedSize:]))
     
     return newPopulation
@@ -208,6 +204,65 @@ def constant_mutation(population,mutationP,matrix):
     
     return newPopulation
 
+def cycle(parents,population):
+    index = 0
+    length = len(parents[0])
+    
+    child1 = [-1]*length
+    child2 = [-1]*length
+    
+    while index < len(parents):
+            
+        p1_copy = parents[index][:]
+        p2_copy = parents[index+1][:]
+        swap = True
+        count = 0
+        pos = 0
+
+        while True:
+            if count > length:
+                break
+            for i in range(length):
+                if child1[i] == -1:
+                    pos = i
+                    break
+
+            if swap:
+                while True:
+                    child1[pos] = parents[index][pos]
+                    count += 1
+                    pos = parents[index+1].index(parents[index][pos])
+                    if p1_copy[pos] == -1:
+                        swap = False
+                        break
+                    p1_copy[pos] = -1
+            else:
+                while True:
+                    child1[pos] = parents[index+1][pos]
+                    count += 1
+                    pos = parents[index].index(parents[index+1][pos])
+                    if p2_copy[pos] == -1:
+                        swap = True
+                        break
+                    p2_copy[pos] = -1
+
+        for i in range(length): #for the second child
+            if child1[i] == parents[index][i]:
+                child2[i] = parents[index+1][i]
+            else:
+                child2[i] = parents[index][i]
+
+        for i in range(length): #Special mode
+            if child1[i] == -1:
+                if p1_copy[i] == -1: #it means that the ith gene from p1 has been already transfered
+                    child1[i] = parents[index+1][i]
+                else:
+                    child1[i] = parents[index][i]
+    
+        index += 2
+        
+        population.append(child1)
+        population.append(child2)
 
 def crossover(population,fitnessValues,POP_SIZE,max_value):
     crossoverP = 0.25
@@ -233,6 +288,8 @@ def crossover(population,fitnessValues,POP_SIZE,max_value):
     
     parents = [newPopulation[i] for i in range(right+1)]
     random.shuffle(parents)
+    
+    # cycle(parents,population)
     
     index = 0
     while index < len(parents):
@@ -271,16 +328,16 @@ def crossover(population,fitnessValues,POP_SIZE,max_value):
 
 def genetic(matrix):
     genT = 0
-    POP_SIZE = 500
+    POP_SIZE = 200
     maximum_value = max_value(matrix)
     
     population = get_population(POP_SIZE,len(matrix))
     fitnessValues = evaluatePop(population,matrix)
     # population = criteriaSort(population,fitnessValues)
-    mutationP = 0.03
+    mutationP = 0.01
     same = 0
     
-    to_save = 20
+    to_save = 5
     
     minim_curent = minim = None
     
@@ -293,8 +350,6 @@ def genetic(matrix):
         #Elitism : Save the best 5 individuals
         saved = get_best(to_save,population,matrix)
         
-        # population = population_control(population,matrix,len(matrix))
-        
         #Selection
         population = tournamentSelect(population,fitnessValues,
                                       POP_SIZE,matrix)
@@ -304,12 +359,12 @@ def genetic(matrix):
         population = constant_mutation(population,mutationP,matrix)
         
         #Crossover
-        population[:0] = saved
+        # population[:0] = saved
         fitnessValues = evaluatePop(population,matrix)
         population = crossover(population,fitnessValues,POP_SIZE,maximum_value)
         
         #Evaluate
-        # population[:0] = saved
+        population[:0] = saved
         fitnessValues = evaluatePop(population,matrix)
         
         #Sort population by fitness. (Optional)
@@ -327,7 +382,7 @@ def genetic(matrix):
             else:
                 minim_curent = minim
                 same = 1
-                to_save = min(to_save+1,20)
+                to_save = min(to_save+1,10)
                 mutationP *= 0.98
         else :
             same = 1
@@ -342,7 +397,7 @@ def genetic(matrix):
             
             mutationP = min(mutationP * 1.015,0.09*(genT//400+1))
             # print(mutationP)
-        # print(f"{genT}. {minim}")
+        print(f"{genT}. {minim}")
         
     minim = maximum_value
     
@@ -423,11 +478,11 @@ def parse_file(filename):
 
 def main():
     # Iterate over all test files.
-     with open(f"results\\GA-ST[30,10]-E-S-cx25-POP500.csv",newline='',mode='w') as csvFile:
+     with open(f"results\\GA-newST[20,5]-E-S-cycle.csv",newline='',mode='w') as csvFile:
         fieldNames = ['File','Best','Worst','Mean','SD','Time']
         writer = csv.DictWriter(csvFile,fieldnames=fieldNames)
         writer.writeheader()
-        for filename in os.listdir(test_directory):
+        for filename in os.listdir(test_directory)[1:]:
             graph = parse_file(filename)
             
             print(f"The processed file is : {filename}")
