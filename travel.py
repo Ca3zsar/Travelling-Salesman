@@ -9,7 +9,6 @@ import csv
 
 test_directory = 'ALL_atsp'
 
-
 def get_minimum(individual, matrix):
     result = 0
     for i in range(len(matrix)-1):
@@ -20,7 +19,6 @@ def get_minimum(individual, matrix):
 
     return result
 
-
 def max_value(matrix):
     n = len(matrix)
     maximum = 0
@@ -30,7 +28,6 @@ def max_value(matrix):
                 maximum = matrix[i][j]
     return maximum * n
 
-
 def check(population):
     n = len(population[0])
     for ind in population:
@@ -38,11 +35,9 @@ def check(population):
             return 0
     return 1
 
-
 def fitness(individual, matrix):
     fitness = (1/get_minimum(individual, matrix))**2
     return fitness
-
 
 def get_new_individual(dimensions):
     individual = [i for i in range(dimensions)]
@@ -50,24 +45,54 @@ def get_new_individual(dimensions):
 
     return individual
 
+# def get_new_individual(dimensions):
+    # individual = []
+    # for i in range(dimensions):
+    #     individual.append(random.randrange(0,dimensions-i))
+    
+    # return individual
 
 def get_population(size, dimensions):
     population = [get_new_individual(dimensions) for _ in range(size)]
     return population
 
-
-def population_control(population, matrix, dimensions):
-    values_count = {}
-
-    n = len(population)
-
+def encode(individual,dimensions):
+    vec = [i for i in range(dimensions)]
+    new_ind = individual[:]
+    
+    for i in range(dimensions):
+        pos = 0
+        for j in range(len(vec)):
+            if individual[i] == vec[j]:
+                pos = j
+                break
+        new_ind[i] = pos
+        vec.pop(pos)
+    
+    return new_ind
+            
+def decode(individual,dimensions):
+    vec = []
+    new_ind = individual[:]
+    
+    for i in range(len(individual)):
+        vec.append(i)
+        
+    for i in range(len(individual)):
+        pos = new_ind[i]
+        new_ind[i] = vec[pos]
+        vec.pop(pos)
+    
+    return new_ind
+        
+def population_control(population, matrix, dimensions,POP_SIZE):
     yes = 1
 
     while yes:
         yes = 0
         for ind in population:
             value = population.count(ind)
-            if value > n*0.05:
+            if value > POP_SIZE*0.01:
                 to_keep = ind[:]
 
                 population = [el for el in population if el != to_keep]
@@ -76,24 +101,21 @@ def population_control(population, matrix, dimensions):
                 yes = 1
                 break
 
-    population.extend(get_population(n-len(population), dimensions))
+    population.extend(get_population(POP_SIZE-len(population), dimensions))
 
     return population
 
-
 def reset_population(population, POP_SIZE, dimensions):
-    to_save = 5
+    to_save = POP_SIZE//10
 
-    new_population = population[to_save:2*to_save]
+    new_population = population[:to_save]
     new_population.extend(get_population(POP_SIZE-to_save, dimensions))
 
     return new_population
 
-
 def evaluatePop(population, matrix):
     eval = [fitness(individual, matrix) for individual in population]
     return eval
-
 
 def criteriaSort(listToBeSorted, criteria):
     population = listToBeSorted[:]
@@ -106,7 +128,6 @@ def criteriaSort(listToBeSorted, criteria):
 
     return population[::-1]
 
-
 def get_best(number, population, matrix):
     fitnessValues = evaluatePop(population, matrix)
 
@@ -114,7 +135,6 @@ def get_best(number, population, matrix):
     newPop = criteriaSort(newPop, fitnessValues)
 
     return newPop[:number]
-
 
 def inverse_individual(individual):
     n = len(individual)
@@ -127,7 +147,6 @@ def inverse_individual(individual):
 
     return v_copy
 
-
 def insert_individual(individual):
     n = len(individual)
     left = random.randrange(0, n-1)
@@ -139,7 +158,6 @@ def insert_individual(individual):
 
     return v_copy
 
-
 def swap_individual(individual):
     n = len(individual)
     left = random.randrange(0, n-1)
@@ -149,7 +167,6 @@ def swap_individual(individual):
     v_copy[left], v_copy[right] = v_copy[right], v_copy[left]
 
     return v_copy
-
 
 def scramble_individual(individual):
     n = len(individual)
@@ -165,8 +182,8 @@ def scramble_individual(individual):
     return v_copy
 
 def tournamentSelect(population, fitnessValues, POP_SIZE, matrix):
-    sampleSize = 25
-    selectedSize = 10
+    sampleSize = 15
+    selectedSize = 5
     done = 0
     newPopulation = []
 
@@ -193,13 +210,12 @@ def tournamentSelect(population, fitnessValues, POP_SIZE, matrix):
     return newPopulation
 
 def constant_mutation(population, mutationP, matrix):
-    mutation_nr = len(population)//2
     newPopulation = []
 
     for i in range(len(population)):
         newChild = population[i][:]
 
-        r = 1-random.random()
+        r = random.random()
 
         if r < mutationP:
             v_inverse = inverse_individual(newChild)
@@ -212,8 +228,8 @@ def constant_mutation(population, mutationP, matrix):
             swap_value = get_minimum(v_swap, matrix)
             scramble_values = get_minimum(v_scramble,matrix)
 
-            new_inds = [v_inverse, v_insert, v_swap]
-            new_values = [inverse_value, insert_value, swap_value]
+            new_inds = [v_inverse, v_insert, v_swap,v_scramble]
+            new_values = [inverse_value, insert_value, swap_value,scramble_values]
 
             bestOf = min(new_values)
 
@@ -221,11 +237,27 @@ def constant_mutation(population, mutationP, matrix):
             current_best = bestOf
 
             newPopulation.append(newChild)
-
-        newPopulation.append(population[i])
+        else:
+            newPopulation.append(population[i])
 
     return newPopulation
 
+def coded_mutation(population,mutationP):
+    new_population = []
+    length = len(population[0])
+     
+    for i in range(len(population)):
+        newChild = population[i][:]
+        
+        for j in range(len(newChild)):
+            r = 1-random.random()
+            if r < mutationP:
+                newChild[j] = random.randrange(0,length-j)
+            
+        new_population.append(newChild)
+        new_population.append(population[i])
+    
+    return new_population
 
 def pmx(a, b, start, stop):
     child = [None]*len(a)
@@ -247,15 +279,15 @@ def pmx(a, b, start, stop):
             child[ind] = b[ind]
     return child
 
-
 def pmx_pair(a, b):
     half = len(a) // 2
     start = random.randint(0, len(a)-half)
     stop = start + half
     return pmx(a, b, start, stop), pmx(b, a, start, stop)
 
-
-def cycle_xover(a, b):
+def cycle_xover(parent1, parent2):
+    a = parent1
+    b = parent2
     child = [None]*len(a)
     while None in child:
         ind = child.index(None)
@@ -271,12 +303,69 @@ def cycle_xover(a, b):
         a, b = b, a
     return child
 
-
 def cycle_xover_pair(a, b):
     return cycle_xover(a, b), cycle_xover(b, a)
 
+def order_xover(a,b):
+    n = len(a)
+    
+    leftLocus = random.randrange(1,n-1)
+    rightLocus = random.randrange(2,n)
+    
+    while rightLocus <= leftLocus:
+        rightLocus = random.randrange(2,n)
 
-def crossover(population, fitnessValues, POP_SIZE, max_value):
+    child1 = child2 = [None] * n
+    for i in range(leftLocus,rightLocus+1):
+        child1[i] = b[i]
+        child2[i] = a[i]
+
+    order1 = a[rightLocus+1:] + a[:rightLocus+1]
+    order2 = b[rightLocus+1:] + b[:rightLocus+1]
+
+    for i in range(leftLocus,rightLocus+1):
+        order1.remove(child2[i])
+        order2.remove(child1[i])
+
+    for i in range(leftLocus):
+        child1[i] = order2[i]
+        child2[i] = order1[i]
+
+    for i in range(rightLocus+1,n):
+        child1[i] = order2[i-rightLocus-1+leftLocus]
+        child2[i] = order1[i-rightLocus-1+leftLocus]
+    
+    return a,b
+
+
+def crossover(population,fitnessValues):
+    parents = criteriaSort(population,fitnessValues)
+
+    population = []
+
+    index = 1
+    while index < len(parents)//2:
+        
+        child1,child2 = order_xover(parents[0],parents[index])
+        
+        population.append(child1)
+        population.append(child2)
+
+        child1,child2 = pmx_pair(parents[0],parents[index])
+        
+        population.append(child1)
+        population.append(child2)
+        
+        child1, child2 = cycle_xover_pair(parents[0], parents[index])
+
+        population.append(child1)
+        population.append(child2)
+
+        index += 1
+
+    return population
+
+def coded_crossover(population):
     crossoverP = 0.25
 
     newP = [0]*len(population)
@@ -300,90 +389,66 @@ def crossover(population, fitnessValues, POP_SIZE, max_value):
 
     parents = [newPopulation[i] for i in range(right+1)]
     random.shuffle(parents)
-
-    # cycle(parents,population)
-    # population = partially_map(parents,population)
-
+    
     index = 0
     while index < len(parents):
-        leftLocus = random.randrange(1,len(parents[0])-1)
-        rightLocus = random.randrange(2,len(parents[0]))
-        while rightLocus <= leftLocus:
-            rightLocus = random.randrange(2,len(parents[0]))
-
-        child1 = child2 = [None] * len(parents[0])
-        for i in range(leftLocus,rightLocus+1):
-            child1[i] = parents[index+1][i]
-            child2[i] = parents[index][i]
-
-        order1 = parents[index][rightLocus+1:] + parents[index][:rightLocus+1]
-        order2 = parents[index+1][rightLocus+1:] + parents[index+1][:rightLocus+1]
-
-        for i in range(leftLocus,rightLocus+1):
-            order1.remove(child2[i])
-            order2.remove(child1[i])
-
-        for i in range(leftLocus):
-            child1[i] = order2[i]
-            child2[i] = order1[i]
-
-        for i in range(rightLocus+1,len(parents[0])):
-            child1[i] = order2[i-rightLocus-1+leftLocus]
-            child2[i] = order1[i-rightLocus-1+leftLocus]
-
-        population.append(child1)
-        population.append(child2)
-
-        child1,child2 = pmx_pair(parents[index],parents[index+1])
+        locus1 = random.randrange(1,len(parents[index])-1)
+        locus2 = random.randrange(locus1,len(parents[index]))
         
-        population.append(child1)
-        population.append(child2)
+        child1 = parents[index][:locus1]
+        child1.extend(parents[index+1][locus1:locus2])
+        child1.extend(parents[index][locus2:])
         
-        child1, child2 = cycle_xover_pair(parents[index], parents[index+1])
-
-        population.append(child1)
-        population.append(child2)
-
+        child2 = parents[index+1][:locus1]
+        child2.extend(parents[index][locus1:locus2])
+        child2.extend(parents[index+1][locus2:])
+        
         index += 2
-
+        
+        population.append(child1)
+        population.append(child2)
+    
+    # print(f"{len(parents)} - {len(population)}")
     return population
+    
 
 def genetic(matrix):
     genT = 0
-    POP_SIZE = 500
+    POP_SIZE = 100
     maximum_value = max_value(matrix)
 
     population = get_population(POP_SIZE, len(matrix))
     fitnessValues = evaluatePop(population, matrix)
     # population = criteriaSort(population,fitnessValues)
-    mutationP = 0.03
+    mutationP = 0.01
+    minMutation = 0.02
+    maxMutation = 0.25
     same = 0
 
-    to_save = 20
+    to_save = 5
 
-    minim_curent = minim = None
+    previous = minim_curent = minim = None
 
-    while genT < 2000:
+    while genT < 10000:
         genT += 1
 
-        population = population_control(population, matrix, len(matrix))
+        population = population_control(population, matrix, len(matrix),POP_SIZE)
 
-        # Elitism : Save the best 5 individuals
         saved = get_best(to_save, population, matrix)
-
-        # Selection
-        population = tournamentSelect(population, fitnessValues,
-                                      POP_SIZE, matrix)
         
-
-        # Mutation
-        population[:0] = saved
-        population = constant_mutation(population, mutationP, matrix)
-
+        # Selection
+        population = tournamentSelect(population[to_save:], fitnessValues[to_save:],
+                                      POP_SIZE-to_save, matrix)
+        
         # Crossover
         population[:0] = saved
-        population = crossover(population, fitnessValues,
-                               POP_SIZE, maximum_value)
+        fitnessValues = evaluatePop(population, matrix)
+        population = crossover(population,fitnessValues)
+        
+        # Mutation
+        # population[:0] = saved
+        # population = coded_mutation(population, mutationP)
+        population = constant_mutation(population,mutationP,matrix)
 
         # Evaluate
         population[:0] = saved
@@ -398,28 +463,36 @@ def genetic(matrix):
             if value < minim:
                 minim = value
 
-        if minim_curent:
-            if minim_curent == minim:
+        if minim_curent and previous:
+            if previous == minim:
                 same += 1
             else:
-                minim_curent = minim
-                same = 1
-                to_save = min(to_save+1, 10)
-                mutationP *= 0.98
+                if minim > minim_curent:
+                    same = 1
+                    to_save = min(to_save+1, 5)
+                else:
+                    minim_curent = minim
+                    mutationP *= 0.98
+                    same = 1
+                previous = minim
         else:
             same = 1
+            previous = minim
             minim_curent = minim
 
         if same % 5 == 0:
-            # population = reset_population(population,POP_SIZE,len(matrix))
-            # fitnessValues = evaluatePop(population,matrix)
-
             if to_save > 0:
                 to_save -= 1
 
-            mutationP = min(mutationP * 1.015, 0.25)
-            # print(mutationP)
-        print(f"{genT}. {minim}")
+            mutationP = min(mutationP + 0.001, maxMutation)
+            if mutationP == maxMutation:
+                mutationP = minMutation
+        
+        if same % 50 == 0:
+            reset_population(population,POP_SIZE,len(matrix))
+            to_save = 5
+        
+        print(f"{genT}. {minim} {mutationP}")
 
     minim = maximum_value
 
@@ -429,7 +502,6 @@ def genetic(matrix):
             minim = value
 
     return minim
-
 
 def simulated_annealing(matrix):
     T = 105
@@ -479,7 +551,6 @@ def simulated_annealing(matrix):
 
     return current_best
 
-
 def parse_file(filename):
     # Open file and parse its contents.
     matrix = []
@@ -497,7 +568,6 @@ def parse_file(filename):
             matrix.append(numbers[i*dimensions:(i+1)*dimensions])
 
     return matrix
-
 
 def main():
     # Iterate over all test files.
