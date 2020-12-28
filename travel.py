@@ -335,7 +335,7 @@ def genetic(matrix):
     population = get_population(POP_SIZE, len(matrix))
     fitnessValues = evaluatePop(population, matrix)
     # population = criteriaSort(population,fitnessValues)
-    mutationP = 0.03
+    mutationP = 0.01
     same = 0
 
     to_save = 20
@@ -347,7 +347,7 @@ def genetic(matrix):
 
         population = population_control(population, matrix, len(matrix),POP_SIZE)
 
-        # Elitism : Save the best 5 individuals
+        # Elitism : Save the best individuals
         saved = get_best(to_save, population, matrix)
 
         # Selection
@@ -475,11 +475,11 @@ def parse_file(filename):
 
 def main():
     # Iterate over all test files.
-    with open(f"results\\GA-newST[20,5]-E-S-cycle.csv", newline='', mode='w') as csvFile:
+    with open(f"results\\GA.csv", newline='', mode='w') as csvFile:
         fieldNames = ['File', 'Best', 'Worst', 'Mean', 'SD', 'Time']
         writer = csv.DictWriter(csvFile, fieldnames=fieldNames)
         writer.writeheader()
-        for filename in os.listdir(test_directory)[1:]:
+        for filename in os.listdir(test_directory)[3:]:
             graph = parse_file(filename)
 
             print(f"The processed file is : {filename}")
