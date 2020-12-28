@@ -56,18 +56,14 @@ def get_population(size, dimensions):
     return population
 
 
-def population_control(population, matrix, dimensions):
-    values_count = {}
-
-    n = len(population)
-
+def population_control(population, matrix, dimensions,POP_SIZE):
     yes = 1
 
     while yes:
         yes = 0
         for ind in population:
             value = population.count(ind)
-            if value > n*0.05:
+            if value > POP_SIZE*0.05:
                 to_keep = ind[:]
 
                 population = [el for el in population if el != to_keep]
@@ -75,19 +71,11 @@ def population_control(population, matrix, dimensions):
 
                 yes = 1
                 break
-
-    population.extend(get_population(n-len(population), dimensions))
+    
+    if len(population) < POP_SIZE:
+        population.extend(get_population(POP_SIZE-len(population), dimensions))
 
     return population
-
-
-def reset_population(population, POP_SIZE, dimensions):
-    to_save = 5
-
-    new_population = population[to_save:2*to_save]
-    new_population.extend(get_population(POP_SIZE-to_save, dimensions))
-
-    return new_population
 
 
 def evaluatePop(population, matrix):
@@ -96,13 +84,7 @@ def evaluatePop(population, matrix):
 
 
 def criteriaSort(listToBeSorted, criteria):
-    population = listToBeSorted[:]
-    zipped_list = zip(criteria, population)
-    zipped_list = sorted(zipped_list)
-
-    criteria, population = zip(*zipped_list)
-    population = list(population)
-    criteria = list(criteria)
+    population = [x for _, x in sorted(zip(criteria,listToBeSorted),key=lambda pair:pair[0])]
 
     return population[::-1]
 
@@ -165,8 +147,8 @@ def scramble_individual(individual):
     return v_copy
 
 def tournamentSelect(population, fitnessValues, POP_SIZE, matrix):
-    sampleSize = 25
-    selectedSize = 10
+    sampleSize = 8
+    selectedSize = 2
     done = 0
     newPopulation = []
 
@@ -221,8 +203,8 @@ def constant_mutation(population, mutationP, matrix):
             current_best = bestOf
 
             newPopulation.append(newChild)
-
-        newPopulation.append(population[i])
+        else:
+            newPopulation.append(population[i])
 
     return newPopulation
 
@@ -276,7 +258,7 @@ def cycle_xover_pair(a, b):
     return cycle_xover(a, b), cycle_xover(b, a)
 
 
-def crossover(population, fitnessValues, POP_SIZE, max_value):
+def crossover(population, POP_SIZE, max_value):
     crossoverP = 0.25
 
     newP = [0]*len(population)
@@ -300,10 +282,7 @@ def crossover(population, fitnessValues, POP_SIZE, max_value):
 
     parents = [newPopulation[i] for i in range(right+1)]
     random.shuffle(parents)
-
-    # cycle(parents,population)
-    # population = partially_map(parents,population)
-
+    
     index = 0
     while index < len(parents):
         leftLocus = random.randrange(1,len(parents[0])-1)
@@ -363,10 +342,10 @@ def genetic(matrix):
 
     minim_curent = minim = None
 
-    while genT < 2000:
+    while genT < 3000:
         genT += 1
 
-        population = population_control(population, matrix, len(matrix))
+        population = population_control(population, matrix, len(matrix),POP_SIZE)
 
         # Elitism : Save the best 5 individuals
         saved = get_best(to_save, population, matrix)
@@ -375,15 +354,13 @@ def genetic(matrix):
         population = tournamentSelect(population, fitnessValues,
                                       POP_SIZE, matrix)
         
-
+         # Crossover
+        population[:0] = saved
+        population = crossover(population, POP_SIZE, maximum_value)
+        
         # Mutation
-        population[:0] = saved
+        # population[:0] = saved
         population = constant_mutation(population, mutationP, matrix)
-
-        # Crossover
-        population[:0] = saved
-        population = crossover(population, fitnessValues,
-                               POP_SIZE, maximum_value)
 
         # Evaluate
         population[:0] = saved
@@ -411,14 +388,11 @@ def genetic(matrix):
             minim_curent = minim
 
         if same % 5 == 0:
-            # population = reset_population(population,POP_SIZE,len(matrix))
-            # fitnessValues = evaluatePop(population,matrix)
 
             if to_save > 0:
                 to_save -= 1
 
             mutationP = min(mutationP * 1.015, 0.25)
-            # print(mutationP)
         print(f"{genT}. {minim}")
 
     minim = maximum_value
