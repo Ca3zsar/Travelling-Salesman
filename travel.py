@@ -74,7 +74,7 @@ def population_control(population, matrix, dimensions,POP_SIZE):
     
     if len(population) < POP_SIZE:
         population.extend(get_population(POP_SIZE-len(population), dimensions))
-
+    
     return population
 
 
@@ -92,10 +92,9 @@ def criteriaSort(listToBeSorted, criteria):
 def get_best(number, population, matrix):
     fitnessValues = evaluatePop(population, matrix)
 
-    newPop = population[:]
-    newPop = criteriaSort(newPop, fitnessValues)
+    population = criteriaSort(population, fitnessValues)
 
-    return newPop[:number]
+    return population[:number]
 
 
 def inverse_individual(individual):
@@ -147,8 +146,8 @@ def scramble_individual(individual):
     return v_copy
 
 def tournamentSelect(population, POP_SIZE, matrix):
-    sampleSize = 9
-    selectedSize = 3
+    sampleSize = 7
+    selectedSize = 1
     done = 0
     newPopulation = []
 
@@ -288,47 +287,48 @@ def order_xover(a,b):
 
 
 def crossover(population, POP_SIZE, max_value):
-    crossoverP = 0.25
-
-    newP = [0]*len(population)
-    newPopulation = population[:]
-    for i in range(len(population)):
-        newP[i] = random.random()
-
-    zipped_list = zip(newP, newPopulation)
-    zipped_list = sorted(zipped_list)
-
-    newP, newPopulation = zip(*zipped_list)
-    newPopulation = list(newPopulation)
-
-    right = bisect.bisect_left(newP, crossoverP)
-    if right % 2 == 0:
-        chance = random.getrandbits(1)
-        if chance == 1:
-            right += 1
-        else:
-            right -= 1
-
-    parents = [newPopulation[i] for i in range(right+1)]
+    
+    parents = [population[i] for i in range(len(population))]
     random.shuffle(parents)
+    
+    if len(parents) %2 == 1:
+        parents.pop()
     
     index = 0
     while index < len(parents):
-       
-        child1,child2 = order_xover(parents[index],parents[index+1])
-       
-        population.append(child1)
-        population.append(child2)
-
-        child1,child2 = pmx_pair(parents[index],parents[index+1])
+        if parents[index] != parents[index+1]:
+            child1,child2 = order_xover(parents[index],parents[index+1])
         
-        population.append(child1)
-        population.append(child2)
-        
-        child1, child2 = cycle_xover_pair(parents[index], parents[index+1])
+            population.append(child1)
+            population.append(child2)
 
-        population.append(child1)
-        population.append(child2)
+            child1,child2 = pmx_pair(parents[index],parents[index+1])
+            
+            population.append(child1)
+            population.append(child2)
+            
+            child1, child2 = cycle_xover_pair(parents[index], parents[index+1])
+
+            population.append(child1)
+            population.append(child2)
+        else:
+            child1 = get_new_individual(len(parents[0]))
+            child2 = get_new_individual(len(parents[0]))
+            
+            child1,child2 = order_xover(parents[index],parents[index+1])
+        
+            population.append(child1)
+            population.append(child2)
+
+            child1,child2 = pmx_pair(parents[index],parents[index+1])
+            
+            population.append(child1)
+            population.append(child2)
+            
+            child1, child2 = cycle_xover_pair(parents[index], parents[index+1])
+
+            population.append(child1)
+            population.append(child2)
 
         index += 2
 
@@ -347,7 +347,7 @@ def genetic(matrix):
 
     minim_curent = minim = None
 
-    while genT < 3000:
+    while genT < 5000:
         genT += 1
 
         population = population_control(population, matrix, len(matrix),POP_SIZE)
@@ -359,7 +359,7 @@ def genetic(matrix):
         population = tournamentSelect(population, POP_SIZE, matrix)
         
          # Crossover
-        population[:0] = saved
+        # population[:0] = saved
         population = crossover(population, POP_SIZE, maximum_value)
         
         # Mutation
@@ -393,7 +393,7 @@ def genetic(matrix):
             if to_save > 0:
                 to_save -= 1
 
-            mutationP = min(mutationP * 1.01, 0.1)
+            mutationP = min(mutationP * 1.01, 0.15)
         print(f"{genT}. {minim}")
 
     minim = maximum_value
@@ -480,7 +480,7 @@ def main():
         fieldNames = ['File', 'Best', 'Worst', 'Mean', 'SD', 'Time']
         writer = csv.DictWriter(csvFile, fieldnames=fieldNames)
         writer.writeheader()
-        for filename in os.listdir(test_directory)[-3:]:
+        for filename in os.listdir(test_directory)[-1:]:
             graph = parse_file(filename)
 
             print(f"The processed file is : {filename}")
