@@ -146,7 +146,7 @@ def scramble_individual(individual):
     
     return v_copy
 
-def tournamentSelect(population, fitnessValues, POP_SIZE, matrix):
+def tournamentSelect(population, POP_SIZE, matrix):
     sampleSize = 8
     selectedSize = 2
     done = 0
@@ -351,8 +351,7 @@ def genetic(matrix):
         saved = get_best(to_save, population, matrix)
 
         # Selection
-        population = tournamentSelect(population, fitnessValues,
-                                      POP_SIZE, matrix)
+        population = tournamentSelect(population, POP_SIZE, matrix)
         
          # Crossover
         population[:0] = saved
