@@ -63,7 +63,7 @@ def population_control(population, matrix, dimensions,POP_SIZE):
         yes = 0
         for ind in population:
             value = population.count(ind)
-            if value > POP_SIZE*0.05:
+            if value > POP_SIZE*0.02:
                 to_keep = ind[:]
 
                 population = [el for el in population if el != to_keep]
@@ -359,7 +359,7 @@ def genetic(matrix):
         population = tournamentSelect(population, POP_SIZE, matrix)
         
          # Crossover
-        # population[:0] = saved
+        population[:0] = saved
         population = crossover(population, POP_SIZE, maximum_value)
         
         # Mutation
@@ -393,7 +393,7 @@ def genetic(matrix):
             if to_save > 0:
                 to_save -= 1
 
-            mutationP = min(mutationP * 1.01, 0.15)
+            mutationP = min(mutationP * 1.005, genT * 0.0001)
         print(f"{genT}. {minim}")
 
     minim = maximum_value
@@ -480,7 +480,7 @@ def main():
         fieldNames = ['File', 'Best', 'Worst', 'Mean', 'SD', 'Time']
         writer = csv.DictWriter(csvFile, fieldnames=fieldNames)
         writer.writeheader()
-        for filename in os.listdir(test_directory)[-1:]:
+        for filename in os.listdir(test_directory)[-3:]:
             graph = parse_file(filename)
 
             print(f"The processed file is : {filename}")
