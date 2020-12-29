@@ -147,14 +147,14 @@ def scramble_individual(individual):
     return v_copy
 
 def tournamentSelect(population, POP_SIZE, matrix):
-    sampleSize = 8
-    selectedSize = 2
+    sampleSize = 9
+    selectedSize = 3
     done = 0
     newPopulation = []
 
-    matingP = 0.2
+    matingP = 0.25
 
-    for i in range((POP_SIZE)//selectedSize):
+    for i in range((POP_SIZE)//2):
         sample = random.sample(population, sampleSize)
         sampleFitness = evaluatePop(sample, matrix)
         sample = criteriaSort(sample, sampleFitness)
@@ -258,6 +258,35 @@ def cycle_xover_pair(a, b):
     return cycle_xover(a, b), cycle_xover(b, a)
 
 
+def order_xover(a,b):
+    leftLocus = random.randrange(1,len(a)-1)
+    rightLocus = random.randrange(2,len(a))
+    while rightLocus <= leftLocus:
+        rightLocus = random.randrange(2,len(a))
+
+    child1 = child2 = [None] * len(a)
+    for i in range(leftLocus,rightLocus+1):
+        child1[i] = b[i]
+        child2[i] = a[i]
+
+    order1 = a[rightLocus+1:] + a[:rightLocus+1]
+    order2 = b[rightLocus+1:] + b[:rightLocus+1]
+
+    for i in range(leftLocus,rightLocus+1):
+        order1.remove(child2[i])
+        order2.remove(child1[i])
+
+    for i in range(leftLocus):
+        child1[i] = order2[i]
+        child2[i] = order1[i]
+
+    for i in range(rightLocus+1,len(a)):
+        child1[i] = order2[i-rightLocus-1+leftLocus]
+        child2[i] = order1[i-rightLocus-1+leftLocus]
+
+    return child1,child2
+
+
 def crossover(population, POP_SIZE, max_value):
     crossoverP = 0.25
 
@@ -285,31 +314,9 @@ def crossover(population, POP_SIZE, max_value):
     
     index = 0
     while index < len(parents):
-        leftLocus = random.randrange(1,len(parents[0])-1)
-        rightLocus = random.randrange(2,len(parents[0]))
-        while rightLocus <= leftLocus:
-            rightLocus = random.randrange(2,len(parents[0]))
-
-        child1 = child2 = [None] * len(parents[0])
-        for i in range(leftLocus,rightLocus+1):
-            child1[i] = parents[index+1][i]
-            child2[i] = parents[index][i]
-
-        order1 = parents[index][rightLocus+1:] + parents[index][:rightLocus+1]
-        order2 = parents[index+1][rightLocus+1:] + parents[index+1][:rightLocus+1]
-
-        for i in range(leftLocus,rightLocus+1):
-            order1.remove(child2[i])
-            order2.remove(child1[i])
-
-        for i in range(leftLocus):
-            child1[i] = order2[i]
-            child2[i] = order1[i]
-
-        for i in range(rightLocus+1,len(parents[0])):
-            child1[i] = order2[i-rightLocus-1+leftLocus]
-            child2[i] = order1[i-rightLocus-1+leftLocus]
-
+       
+        child1,child2 = order_xover(parents[index],parents[index+1])
+       
         population.append(child1)
         population.append(child2)
 
@@ -333,8 +340,6 @@ def genetic(matrix):
     maximum_value = max_value(matrix)
 
     population = get_population(POP_SIZE, len(matrix))
-    fitnessValues = evaluatePop(population, matrix)
-    # population = criteriaSort(population,fitnessValues)
     mutationP = 0.01
     same = 0
 
@@ -363,10 +368,7 @@ def genetic(matrix):
 
         # Evaluate
         population[:0] = saved
-        fitnessValues = evaluatePop(population, matrix)
 
-        # Sort population by fitness. (Optional)
-        # population = criteriaSort(population,fitnessValues)
 
         minim = maximum_value
         for i in population:
@@ -380,7 +382,7 @@ def genetic(matrix):
             else:
                 minim_curent = minim
                 same = 1
-                to_save = min(to_save+1, 10)
+                to_save = min(to_save+1, 20)
                 mutationP *= 0.98
         else:
             same = 1
@@ -391,7 +393,7 @@ def genetic(matrix):
             if to_save > 0:
                 to_save -= 1
 
-            mutationP = min(mutationP * 1.015, 0.25)
+            mutationP = min(mutationP * 1.01, 0.1)
         print(f"{genT}. {minim}")
 
     minim = maximum_value
@@ -478,7 +480,7 @@ def main():
         fieldNames = ['File', 'Best', 'Worst', 'Mean', 'SD', 'Time']
         writer = csv.DictWriter(csvFile, fieldnames=fieldNames)
         writer.writeheader()
-        for filename in os.listdir(test_directory)[3:]:
+        for filename in os.listdir(test_directory)[-3:]:
             graph = parse_file(filename)
 
             print(f"The processed file is : {filename}")
