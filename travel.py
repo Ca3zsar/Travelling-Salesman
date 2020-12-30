@@ -146,7 +146,7 @@ def scramble_individual(individual):
     return v_copy
 
 def tournamentSelect(population, POP_SIZE, matrix):
-    sampleSize = 7
+    sampleSize = 10
     selectedSize = 1
     done = 0
     newPopulation = []
@@ -180,7 +180,7 @@ def constant_mutation(population, mutationP, matrix):
     for i in range(len(population)):
         newChild = population[i][:]
 
-        r = 1-random.random()
+        r = random.random()
 
         if r < mutationP:
             v_inverse = inverse_individual(newChild)
@@ -480,7 +480,7 @@ def main():
         fieldNames = ['File', 'Best', 'Worst', 'Mean', 'SD', 'Time']
         writer = csv.DictWriter(csvFile, fieldnames=fieldNames)
         writer.writeheader()
-        for filename in os.listdir(test_directory)[-3:]:
+        for filename in os.listdir(test_directory)[8:]:
             graph = parse_file(filename)
 
             print(f"The processed file is : {filename}")
