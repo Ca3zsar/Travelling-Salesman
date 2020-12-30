@@ -480,7 +480,7 @@ def main():
         fieldNames = ['File', 'Best', 'Worst', 'Mean', 'SD', 'Time']
         writer = csv.DictWriter(csvFile, fieldnames=fieldNames)
         writer.writeheader()
-        for filename in os.listdir(test_directory)[8:]:
+        for filename in os.listdir(test_directory):
             graph = parse_file(filename)
 
             print(f"The processed file is : {filename}")
